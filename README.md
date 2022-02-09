@@ -24,12 +24,18 @@ The following prerequisites are necessary:
 
 ## High-level overivew 
 Here's what you'll be doing:
-1. Provisioning your OpenShift sandbox (i.e your cluster)  
+1. Provisioning your OpenShift sandbox (i.e. your cluster)  
 1. Creating your managed kafka instance  
-1. Linking your cluster to your kafka instance 
-1. Creating your kafka topic  
-1. Creating the kafka producer C# application  
-1. Linking your producer application to your kafka instance  
-1. Observing the results  
+1. Creating an app to produce events  
+1. Creating an app to consume events and write to an event store  
+1. Creating an app that summarizes a day's events and stores the results in a database
+1. Creating a web app to view and control this system  
 
+
+## 1. Provisioning your OpenShift sandbox (i.e your cluster)  
+## 2. Creating your managed kafka instance  
+## 3. Creating an app to produce events  
+## 4. Creating an app to consume events and write to an event store  
+## 5. Creating an app that summarizes a day's events and stores the results in a database
+## 6. Creating a web app to view and control this system  
 
