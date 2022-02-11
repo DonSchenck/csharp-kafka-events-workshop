@@ -33,6 +33,9 @@ Here's what you'll be doing:
 
 
 ## 1. Provisioning your OpenShift sandbox (i.e your cluster)  
+### 1.1 Get your sandbox
+### 1.2 Log in to your sandbox from the command line
+
 ## 2. Creating your managed kafka instance  
 Go to https://developers.redhat.com/products/red-hat-openshift-streams-for-apache-kafka/getting-started  
 
@@ -145,7 +148,7 @@ Kubernetes Namespace:           pipelines-tutorial
 Service Account Secret:         rh-cloud-services-service-account
 ```
 
-Like some of the previous commands, 
+Like some of the previous commands, this command will update your config.json file associated with Service Binding. This is user later when you bind your Kafka instance to your service running in OpenShift.
 
 ## 3. Creating an app to produce events  
 ## 4. Creating an app to consume events and write to an event store  
