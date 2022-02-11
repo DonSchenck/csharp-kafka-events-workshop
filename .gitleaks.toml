@@ -1,0 +1,6 @@
+[allowlist]
+  description = "Allowlist"
+  files = [
+    '''README.md''',
+    '''^\.?gitleaks.toml$''',
+  ]
