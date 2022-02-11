@@ -1,6 +1,6 @@
-# csharp-kafka-turtorial
+# csharp-kafka-events-workshop
 
-This tutorial/workshop will guide you through the creation of an application that demonstrates Apache Kafka and Event Handling using the C# programming language.  
+This workshop/tutorial will guide you through the creation of an application that demonstrates Apache Kafka and Event Handling using the C# programming language.  
 
 At the end of this tutorial you will have:  
 1. An instance of OpenShift running in Developer Sandbox for Red Hat Openshift. This will be referred to as your "cluster".  
@@ -13,7 +13,7 @@ At the end of this tutorial you will have:
 1. An application that is a web page to control and view your system. This application is written in JavaScript and JQuery.  
 
 ## Note from the author  
-Yes, this tutorial is a bit lengthy, with many moving parts. This is a result of my attempt to mimic a real world situation. This is not just a simple "Hello world" example; this tutorial will yield useable information for your own use of Kafka and/or an Event Store.
+Yes, this tutorial is lengthy and involves many moving parts. This is a result of my attempt to mimic a real world situation. This is not just a simple "Hello world" example; this tutorial will yield useable information for your own use of Kafka and/or an Event Store.
 
 ## Prerequisites  
 The following prerequisites are necessary:  
@@ -35,6 +35,8 @@ Here's what you'll be doing:
 ## 1. Provisioning your OpenShift sandbox (i.e your cluster)  
 ### 1.1 Get your sandbox
 ### 1.2 Log in to your sandbox from the command line
+Open a terminal session on your local machine and log into your cluster from there. The instructions for doing that are in [this short article](https://developers.redhat.com/blog/2021/04/21/access-your-developer-sandbox-for-red-hat-openshift-from-the-command-line).
+
 
 ## 2. Creating your managed kafka instance  
 Go to https://developers.redhat.com/products/red-hat-openshift-streams-for-apache-kafka/getting-started  
@@ -52,7 +54,9 @@ You will return to the Red Hat cloud console and will see you instance with a st
 After a few minutes the status will change to "Ready". If you don't see this, try refreshing your browser ocassionally until you see this status. At this point you have a Kafka instance for your own use.  
 
 ### 2.2 Log in  
-Run the command `rhoas login` at the command line to log into your Red Hat OpenShift Application Services account.  
+Run this command to log into your Red Hat OpenShift Application Services account:  
+
+`rhoas login`
 
 In case you're interested in some of the behind-the-scenes action: This updates the rhoas CLI config file with the access token. The file is located at:
 
@@ -150,7 +154,45 @@ Service Account Secret:         rh-cloud-services-service-account
 
 Like some of the previous commands, this command will update your config.json file associated with Service Binding. This is user later when you bind your Kafka instance to your service running in OpenShift.
 
+At this point we're ready to "bind" our Kafka instance to our application. More specifically, the Service Binding tool will look for any DeploymentConfig objects in your current OpenShift project and will let you select the one with which you wish to bind your Kafka instance.
+
+For this tutorial, we haven't created that DeploymentConfig yet. That's the next step.
+
 ## 3. Creating an app to produce events  
+The first step in this entire suite of applications is to have a service in OpenShift that produces events into the proper topic in our Kafka instance.
+
+### 3.1 View the source code — this is optional
+If you wish to see the code that will be implemented, check out [this Github repository](https://github.com/donschenck/vac-seen-generator).
+
+### 3.2 Hard-coded values
+Several values are hard-coded inside the application. *Part* of the reason for this is to mimic the real-world implementation of a microservice.
+
+If this were the actual vaccination-tracking system, you would expect very country to create their own reporting system. Therefore, hard-coding the country code, vaccination types, and other specific information makes total sense.
+
+### 3.3 What we're doing
+This application will create one to 40 vaccination events per day for the past 30 days.  
+
+The type of shot (e.g. Pfizer or Moderna), the shot number (1st vaccination, 2nd, booster) and number of events for that day are all randomly generated.
+
+### 3.4 How the Service Binding works
+When this application starts, it has no knowledge of the Kafka instance to which it will produce events. In order to write to Kafka, this application needs to know the following:  
+* URI of the bootstrap server
+* Topic — hard-coded as "us"
+* Security Protocol
+* SaslMechanicm
+* SaslUsername
+* SaslPassword
+
+Other than the topic, the information is supplied by the Service Binding mechanism. Here is how that mechanism works:
+
+When you run the command `rhoas service bind`, the rhoas CLI will gather the needed information from your active Kafka cluster. It will then use the token in your config.json file to connect to your cluster and retrieve a list of DeploymentConfigs in your current project.
+
+You are presented with that list, and you select a DeploymentConfig. The tool will then create (or add to, if already existing) a directory in the root directory of that DeploymentConfig's container, called "bindings". Inside that "bindings" directory, a directory is created for your Kafka instance, and files are added containing the needed information, i.e. URI, Security Protocol, etc.
+
+When this happens, the existing pod in the container is destroyed and replaced with a new pod. This new pod has visibility to the new "bindings" directory (and sub-directories). The application can then read from these files, get the information needed, and begin sending events to Kafka.
+
+### 3.5 Creating the app in OpenShift
+
 ## 4. Creating an app to consume events and write to an event store  
 ## 5. Creating an app that summarizes a day's events and stores the results in a database
 ## 6. Creating a web app to view and control this system  
