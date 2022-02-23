@@ -10,22 +10,22 @@ At the end of this tutorial you will have:
 1. An instance of a MariaDB database running in your OpenShift cluster.  
 1. An application that reads from your Kafka instance and writes the events to an event store. This application is written in C#.  
 1. An application that reads from your event store, performs a summary for a given date, and writes to your MariaDB database. This application is written in C#.  
-1. An application that is a web page to control and view your system. This application is written in JavaScript and JQuery.  
+1. An application that is a web page to control and view your system.
 
 ## Note from the author  
 Yes, this tutorial is lengthy and involves many moving parts. This is a result of my attempt to mimic a real world situation. This is not just a simple "Hello world" example; this tutorial will yield useable information for your own use of Kafka and/or an Event Store.
 
 ## Prerequisites  
 The following prerequisites are necessary:  
-1. An account in Developer Sandbox for Red Hat OpenShift (No problem; it's free)  
+1. An account in Developer Sandbox for Red Hat OpenShift (No problem; it's free). This is not actually *necessary*, since you can use this tutorial with any OpenShift cluster *as long as the Service Binding Operator is installed*.  If you don't have access to a cluster with the Service Binding Operator, or just want to experiment on your own, the Developer Sandbox is perfect.  
 1. An instance of Red Hat OpenShift Stream for Apache Kafka (Again, it's free)  
-1. The `oc` command-line tool for OpenShift  
-1. The `rhoas` command-line tool for Red Hat service binding  
+1. The `oc` command-line tool for OpenShift. There are instructions later in this article for the installation of `oc`.
+1. The `rhoas` command-line tool for Red Hat service binding. There are instructions later in this article for the installation of `rhoas`.  
 
-## High-level overivew 
+## High-level overview 
 Here's what you'll be doing:
 1. Provisioning your OpenShift sandbox (i.e. your cluster)  
-1. Creating your managed kafka instance  
+1. Preparing your managed Kafka instance  
 1. Creating an app to produce events  
 1. Creating an app to consume events and write to an event store  
 1. Creating an app that summarizes a day's events and stores the results in a database
@@ -34,37 +34,61 @@ Here's what you'll be doing:
 
 ## 1. Provisioning your OpenShift sandbox (i.e your cluster)  
 ### 1.1 Get your sandbox
-### 1.2 Log in to your sandbox from the command line
-Open a terminal session on your local machine and log into your cluster from there. The instructions for doing that are in [this short article](https://developers.redhat.com/blog/2021/04/21/access-your-developer-sandbox-for-red-hat-openshift-from-the-command-line).
+The Developer Sandbox for Red Hat OpenShift is a free offering from Red Hat that gives you developer-level access rights to an OpenShift cluster. If you have not already signed up for this free cluster, do so by visiting [the Developer Sandbox web page](https://developers.redhat.com/developer-sandbox).  
+
+If you are using your own cluster, [the Service Binding Operator must be installed](https://docs.openshift.com/container-platform/4.9/applications/connecting_applications_to_services/installing-sbo.html).  
+
+### 1.2 Install the 'oc' CLI  
+The `oc` command line interface (CLI) allows you to work with your OpenShift cluster from a terminal command line. The `oc` CLI for OpenShift can be installed by following the instructions on [the oc CLI Getting Started web page](https://docs.openshift.com/container-platform/4.9/cli_reference/openshift_cli/getting-started-cli.html).
+
+### 1.3 Log in to your sandbox from the command line
+Open a terminal session on your local machine and use the `oc login` command to log into your cluster from there. The instructions for doing that are in [this short article](https://developers.redhat.com/blog/2021/04/21/access-your-developer-sandbox-for-red-hat-openshift-from-the-command-line).  This can be done using macOS, Windows, and Linux.
 
 
-## 2. Creating your managed kafka instance  
+## 2. Preparing your managed Kafka instance  
+### 2.1 Get your managed Kafka instance  
 Go to https://developers.redhat.com/products/red-hat-openshift-streams-for-apache-kafka/getting-started  
 
-Click on "Try our Kafka service at no cost" (red) button. You'll be prompted to log in to your Red Hat Developer account.  
+Click on "Try our Kafka service at no cost" (red) button. You may be prompted to log in to your Red Hat Developer account:  
+
+![Try our Kafka service at no cost](./images/try_kafka_button.png)
+
 
 You'll arrive at the Red Hat cloud console and be able to start the process to create a Kafka instance for your own use.  
 
-Click "Create Kafka instance" button.  
+Click "Create Kafka instance" button:  
 
-Supply a name and select a Cloud region and then click the "Create instance" button.  
+![Create Kafka instance button](./images/create_a_kafka_instance_button.png)
+
+
+Supply a name and select a Cloud region and then click the "Create instance" button. *The name doesn't matter*, but you'll need to remember it. Of course, a best practice would be to make the name align with its purpose:  
+
+![Create instance form](./images/create_instance.png)
+
 
 You will return to the Red Hat cloud console and will see you instance with a status of "Creation pending". This status will soon change to "Creation in progress".  
 
-After a few minutes the status will change to "Ready". If you don't see this, try refreshing your browser ocassionally until you see this status. At this point you have a Kafka instance for your own use.  
+After a few minutes the status will change to "Ready". If you don't see this, try refreshing your browser ocassionally until you see this status. At this moment you have a Kafka instance for your own use.  
 
-### 2.2 Log in  
-Run this command to log into your Red Hat OpenShift Application Services account:  
+![Kafka instance is ready](./images/kafka_instance_is_ready.png)
+
+### 2.2 Install the 'rhoas' CLI
+The `rhoas` (Red Hat OpenShift Application Services) CLI can be installed by following the instructions on [the `rhoas` CLI installation page](https://access.redhat.com/documentation/en-us/red_hat_openshift_streams_for_apache_kafka/1/guide/f520e427-cad2-40ce-823d-96234ccbc047). This CLI is needed to use the Service Binding that connects your Kafka instance to your application.
+
+### 2.3 Log in  
+Run this command to log into your Red Hat OpenShift Application Services account. 
 
 `rhoas login`
 
-In case you're interested in some of the behind-the-scenes action: This updates the rhoas CLI config file with the access token. The file is located at:
+Note that the command will open a tab in your default web browser, after which you can return to your terminal session. If you don't have a browser available you can run the `rhoas login --help` command and investigate the `--token` option.
 
-On MacOS: $HOME/Library/Application Support/rhoas/config.json  
-On Linux: $XDG_CONFIG_HOME/rhoas/config.json, falls back to $HOME/.config/rhoas/config.json  
-On Windows: C:\Users\<username>\AppData\Roaming\rhoas\config.json  
+In case you're interested in some of the behind-the-scenes action: This command updates the rhoas CLI config file with the access token. The file is located at:
 
-Once you've logged in, you can run the following command and see your Kafka instance listed. This proves that you are "connected" to it from your machine.
+* macOS: $HOME/Library/Application Support/rhoas/config.json  
+* Linux: $XDG_CONFIG_HOME/rhoas/config.json, falls back to $HOME/.config/rhoas/config.json  
+* Windows: C:\Users\<username>\AppData\Roaming\rhoas\config.json  
+
+Once you've logged in you can run the following command and see your Kafka instance listed. This proves that you are "connected" to it from your machine.
 
 `rhoas kafka list`  
 
@@ -73,31 +97,29 @@ Here's an example:
 ❯ rhoas kafka list  
   ID                     NAME                      OWNER                      STATUS   CLOUD PROVIDER   REGION
  ---------------------- ------------------------- -------------------------- -------- ---------------- -----------  
-  c81tikqn7js5nj3rbm1g   jnyilimb-kafka-instance   jnyilimb@redhat.com        ready    aws              us-east-1  
-  c819fgn12sqgnlshpv3g   mpiech-object-detection   mpiech@redhat.com          ready    aws              us-east-1  
-  c821l7an7js5nj3rfua0   vax                       rhn-engineering-dschenck   ready    aws              us-east-1  
+ c821l7an7js5nj3rfua0   vaccinations              rhn-engineering-dschenck   ready    aws              us-east-1  
 
 ```
 
 
-### 2.3 Determine which kafka instance to use  
+### 2.4 Determine which kafka instance to use  
 It's possible to have more than one Kafka instance available to you (in order words, `rhoas kafka list` shows multiple instances), so it's necessary to specify which one you want to use. This is done by using the command `rhoas kafka use`. Here's an example:  
 
-`rhoas kafka use --name vax`  
+`rhoas kafka use --name vaccinations`  
 
 ```console
-❯ rhoas kafka use --name vax
- Kafka instance "vax" has been set as the current instance.
+❯ rhoas kafka use --name vaccinations
+ Kafka instance "vaccinations" has been set as the current instance.
 ```
 
-### 2.4 Create a Kafka topic
-Events are written to and retrieved from Kafka by subscribing to a specific "topic" within a specific kafka instance. At this point it is necessary to create a topic within the "vax" instance. Our event producer has the topic "us" hard-coded into it, so we need to create that topic. Use the following command to create the topic:  
+### 2.5 Create a Kafka topic
+Events are written to and retrieved from Kafka by subscribing to a specific "topic" within a specific Kafka instance. At this point it is necessary to create a topic within the "vaccinations" instance. Our event producer has the topic "us" hard-coded into it, so we need to create that topic. Use the following command to create the topic:  
 
 `rhoas kafka topic create --name us`
 
 ```console
 ❯ rhoas kafka topic create --name us
-Topic "us" created in Kafka instance "vax":
+Topic "us" created in Kafka instance "vaccinations":
 <<several lines removed for brevity>>
 ```
 
@@ -112,7 +134,7 @@ The command will return a lot of JSON with information about the topic. You can 
   us              1   604800000             -1 (Unlimited)
 ```
 
-### 2.5 Get the token needed to connect to your cluster
+### 2.6 Get the token needed to connect to your cluster
 You will need an authentication token in order for your Kafka isntance to connect to your OpenShift cluster. Get that token by visiting the following web page:
 
 https://console.redhat.com/openshift/token
@@ -131,46 +153,76 @@ With the token in your machine's clipboard, run the following command:
 
 When prompted, choose "kafka" as the type of service.
 
-Here's an example: 
+The resulting output will be verbose, but toward the end of it is a very important note: 
 
 ```console
-❯ rhoas cluster connect --token eyJhbGciOiJIUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJhZDUyMjdhMy1iY2ZkLTRjZjAtYTdiNi0zOTk4MzVhMDg1NjYifQ.eyJpYXQiOjE2NDQ1MTE4NTYsImp0aSI6IjgwN2YwMTI3LWQ2NGMtNDMxYi1iZjA4LTQzMjQ1NmVmNmVmZiIsImlzcyI6Imh0dHBzOi8vc3NvLnJlZGhhdC5jb20vYXV0aC9yZWFsbXMvcmVkaGF0LWV4dGVybmFsIiwiYXVkIjoiaHR0cHM6Ly9zc28ucmVkaGF0LmNvbS9hdXRoL3JlYWxtcy9yZWRoYXQtZXh0ZXJuYWwiLCJzdWIiOiJmOjUyOGQ3NmZmLWY3MDgtNDNlZC04foofoofoofoofoofooNjpyaG4tZW5naW5lZXJpbmctZHNjaGVuY2siLCJ0eXAiOiJPZmZsaW5lIiwiYXpwIjoiY2xvdWQtc2VydmljZXMiLCJub25jZSI6IjdmZmE5MzUyLWVjZmQtNDcyZS1hOGRjLTQ3YThlNmQyYjFkNSIsInNlc3Npb25fc3RhdGUiOiJiZWRiZTRkZC0yMThiLTQ1NGEtOWQ5My1iNjlmMmRhMjkwMmYiLCJzY29wZSI6Im9wZW5pZCBvZmZsaW5lX2FjY2VzcyIsInNpZCI6ImJlZGJlNGRkLTIxOGItNDU0YS05ZDkzLWI2OWYyZGEyOTAyZiJ9._xRhrsMxuqt4PGoRmiDlEOCxEHpyaLRliP2UYQ_kk8k
-? Select type of service  [Use arrows to move, type to filter]
-> kafka
-  service-registry
+
+Client ID:     <<redacted>
+
+Make a copy of the client ID to store in a safe place. Credentials won't appear again after closing the terminal.
+
+You will need to assign permissions to service account in order to use it.
+
+You need to separately grant service account access to Kafka by issuing following command
+
+  $ rhoas kafka acl grant-access --producer --consumer --service-account <redacted> --topic all --group all
+
+ kafka resource "vaccinations" has been created
+Waiting for status from kafka resource.
+Created kafka can be already injected to your application.
+
+To bind you need to have Service Binding Operator installed:
+https://github.com/redhat-developer/service-binding-operator
+
+You can bind kafka to your application by executing "rhoas cluster bind"
+or directly in the OpenShift Console topology view.
+
+ Connection to service successful.
+Sending telemetery information for rhoas cluster connect
 ```
-
-```console
-This command will link your cluster with Cloud Services by creating custom resources and secrets.
-In case of problems please execute "rhoas cluster status" to check if your cluster is properly configured
-
-Connection Details:
-
-Service Type:                   kafka
-Service Name:                   vax
-Kubernetes Namespace:           pipelines-tutorial
-Service Account Secret:         rh-cloud-services-service-account
-```
-
 Like some of the previous commands, this command will update your config.json file associated with Service Binding. This is user later when you bind your Kafka instance to your service running in OpenShift.
+
+
+As noted near the end of the output from the `rhoas cluster connect` command, you must run the `rhoas kafka acl grant-access` command. Here's an example:
+
+```console
+❯ rhoas kafka acl grant-access --producer --consumer --service-account srvc-acct-6d9fe894-02e3-4279-aa53-XXXXXXXXXX --topic all --group all
+The following ACL rules will be created:
+
+  PRINCIPAL (7)                                    PERMISSION   OPERATION   DESCRIPTION
+ ------------------------------------------------ ------------ ----------- -------------------------
+  srvc-acct-6d9fe894-02e3-4279-aa53-XXXXXXXXXXXX   allow        describe    topic is "*"
+  srvc-acct-6d9fe894-02e3-4279-aa53-XXXXXXXXXXXX   allow        read        topic is "*"
+  srvc-acct-6d9fe894-02e3-4279-aa53-XXXXXXXXXXXX   allow        read        group is "*"
+  srvc-acct-6d9fe894-02e3-4279-aa53-XXXXXXXXXXXX   allow        write       topic is "*"
+  srvc-acct-6d9fe894-02e3-4279-aa53-XXXXXXXXXXXX   allow        create      topic is "*"
+  srvc-acct-6d9fe894-02e3-4279-aa53-XXXXXXXXXXXX   allow        write       transactional-id is "*"
+  srvc-acct-6d9fe894-02e3-4279-aa53-XXXXXXXXXXXX   allow        describe    transactional-id is "*"
+? Are you sure you want to create the listed ACL rules? Yes
+ ACLs successfully created in the Kafka instance "vaccinations"
+ ```
+
+If you look at your cluster's web-based dashboard, you'll now see the Apache Kafka Connection object:
+
+![Apache Kafka Connection object in web dashboard](./images/akc_in_dashboard.png)
 
 At this point we're ready to "bind" our Kafka instance to our application. More specifically, the Service Binding tool will look for any DeploymentConfig objects in your current OpenShift project and will let you select the one with which you wish to bind your Kafka instance.
 
-For this tutorial, we haven't created that DeploymentConfig yet. That's the next step.
+But wait; we don't *have* an application. For this tutorial, we haven't created that DeploymentConfig yet. That's the next step.
 
 ## 3. Creating an app to produce events  
-The first step in this entire suite of applications is to have a service in OpenShift that produces events into the proper topic in our Kafka instance.
+The first step in this entire suite of applications is to have a service in OpenShift that produces events and deposits them into the proper topic in our Kafka instance. This is the source of our events. An Event Source is where events are generated. An Event Sink is where events are consumed.
 
 ### 3.1 View the source code — this is optional
-If you wish to see the code that will be implemented, check out [this Github repository](https://github.com/donschenck/vac-seen-generator).
+If you wish to see the code that will be implemented, check out [this Github repository](https://github.com/DonSchenck/vac-seen-generator).
 
 ### 3.2 Hard-coded values
 Several values are hard-coded inside the application. *Part* of the reason for this is to mimic the real-world implementation of a microservice.
 
-If this were the actual vaccination-tracking system, you would expect very country to create their own reporting system. Therefore, hard-coding the country code, vaccination types, and other specific information makes total sense.
+If this were the actual vaccination tracking system, you would expect every country to create their own reporting system. In that context, hard-coding the country code, vaccination types, and other specific information makes sense.
 
 ### 3.3 What we're doing
-This application will create one to 40 vaccination events per day for the past 30 days.  
+This application will create from one to 40 vaccination events per day for the past 30 days.  
 
 The type of shot (e.g. Pfizer or Moderna), the shot number (1st vaccination, 2nd, booster) and number of events for that day are all randomly generated.
 
@@ -183,7 +235,9 @@ When this application starts, it has no knowledge of the Kafka instance to which
 * SaslUsername
 * SaslPassword
 
-Other than the topic, the information is supplied by the Service Binding mechanism. Here is how that mechanism works:
+If you were not using Service Binding, you would need to supply those values to your code, probably by using environment variables and OpenShift Secrets.
+
+But for our tutorial — other than the topic — the information is supplied by the Service Binding mechanism. Here is how that mechanism works:
 
 When you run the command `rhoas service bind`, the rhoas CLI will gather the needed information from your active Kafka cluster. It will then use the token in your config.json file to connect to your cluster and retrieve a list of DeploymentConfigs in your current project.
 
@@ -191,7 +245,65 @@ You are presented with that list, and you select a DeploymentConfig. The tool wi
 
 When this happens, the existing pod in the container is destroyed and replaced with a new pod. This new pod has visibility to the new "bindings" directory (and sub-directories). The application can then read from these files, get the information needed, and begin sending events to Kafka.
 
-### 3.5 Creating the app in OpenShift
+
+### 3.5 The app
+The source code for the application can be found at this Github repo:
+
+[https://github.com/DonSchenck/vac-seen-generator.git](https://github.com/DonSchenck/vac-seen-generator.git)
+
+You **do not** need to clone or download this repo. Instead, we'll use the OpenShift option to build our application from a Github repo.
+
+### 3.6 Creating the app
+In the OpenShift dashboard, make sure you are in the Developer perspective.  
+
+![Developer Perspective](./images/developer_perspective.png)
+
+Click on the +Add option to reveal the Add options panel.  
+
+![Add options panel](./images/dashboard_add_options_panel.png)  
+
+Click on the "Import from Git" card to be prompted for the information needed to get the source from a Git repo and build our application:  
+
+![Import from Git prompt](./images/import_from_git_prompt.png)  
+
+Copy and paste the Github repo URL (https://github.com/DonSchenck/vac-seen-generator.git) into the prompt. OpenShift will immediately inspect the source code and determine the most likely build method. In this case, it chooses "Dockerfile", which is correct. OpenShift will use the Dockerfile in our source code to build the application.
+
+![Ready to create application](./images/ready_to_import_from_git.png)  
+
+Click the Create button to start the build. In a few minutes we'll have our application up and running.
+
+![vac-seen-generator with no service binding](./images/vac_seen_generator_up_and_running_without_service_binding.png)  
+
+
+### 3.7 Binding Kafka and our App
+At this point we have a Kafka instance, and we have an application. However, we have not yet bound the instance to the app as explained in section 3.4.  
+
+We can see this fact — the fact that it's not bound to Kafka — by viewing the logs at the command line. Use the following command:
+
+`oc logs -l vac-seen-generator-git`  
+
+Here's an example:
+```console
+❯ oc logs -l app=vac-seen-generator-git
+Waiting for service binding...
+Waiting for service binding...
+Waiting for service binding...
+Waiting for service binding...
+Waiting for service binding...
+Waiting for service binding...
+Waiting for service binding...
+Waiting for service binding...
+Waiting for service binding...
+Waiting for service binding...
+```
+Binding the Kafka instance to our application is one simple command at the command line. Let's do that now.
+
+Return to your command line and run the following command:
+
+`rhoas cluster bind`  
+
+This will as you to select a DeploymentConfig. Choose "vac-seen-generator". This will bind your Kafka instance to your application.
+
 
 ## 4. Creating an app to consume events and write to an event store  
 ## 5. Creating an app that summarizes a day's events and stores the results in a database
