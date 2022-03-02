@@ -241,7 +241,7 @@ But for our tutorial — other than the topic — the information is supplied by
 
 When you run the command `rhoas service bind`, the rhoas CLI will gather the needed information from your active Kafka cluster. It will then use the token in your config.json file to connect to your cluster and retrieve a list of DeploymentConfigs in your current project.
 
-You are presented with that list, and you select a DeploymentConfig. The tool will then create (or add to, if already existing) a directory in the root directory of that DeploymentConfig's container, called "bindings". Inside that "bindings" directory, a directory is created for your Kafka instance, and files are added containing the needed information, i.e. URI, Security Protocol, etc.
+You are presented with that list, and you select a Deployment. The tool will then create (or add to, if already existing) a directory in the root directory of that Deployment's container, called "bindings". Inside that "bindings" directory, a directory is created for your Kafka instance, and files are added containing the needed information, i.e. URI, Security Protocol, etc.
 
 When this happens, the existing pod in the container is destroyed and replaced with a new pod. This new pod has visibility to the new "bindings" directory (and sub-directories). The application can then read from these files, get the information needed, and begin sending events to Kafka.
 
@@ -280,7 +280,7 @@ At this point we have a Kafka instance, and we have an application. However, we 
 
 We can see this fact — the fact that it's not bound to Kafka — by viewing the logs at the command line. Use the following command:
 
-`oc logs -l vac-seen-generator-git`  
+`oc logs -l app=vac-seen-generator-git`  
 
 Here's an example:
 ```console
@@ -302,8 +302,42 @@ Return to your command line and run the following command:
 
 `rhoas cluster bind`  
 
-This will as you to select a DeploymentConfig. Choose "vac-seen-generator". This will bind your Kafka instance to your application.
+This will as you to select a Deployment. Choose "vac-seen-generator". This will bind your Kafka instance to your application.
 
+Here's an example:
+
+```console
+❯ rhoas cluster bind
+Namespace not provided. Using rhn-engineering-dschenck-dev namespace
+Looking for Deployment resources. Use --deployment-config flag to look for deployment configs
+? Please select application you want to connect with vac-seen-generator-git
+? Select type of service kafka
+Binding "vaccinations" with "vac-seen-generator-git" app
+? Do you want to continue? Yes
+Using ServiceBinding Operator to perform binding
+ Binding vaccinations with vac-seen-generator-git app succeeded
+ ```
+
+If you run the `oc logs -l app=vac-seen-generator-git` command again, you will see evidence of the events being generated. Here's an example:
+
+```console
+❯ oc logs -l app=vac-seen-generator-git
+Delivered message to us [[0]] @2692
+{"RecipientID":"dc5e646f-491f-4bd7-8bcc-f320499ece8e","EventTimestamp":"2022-02-12T19:13:07.8024849+00:00","CountryCode":"US","VaccinationType":"Johnson & Johnson","ShotNumber":2}
+Delivered message to us [[0]] @2693
+{"RecipientID":"806cc197-5117-499d-b0a1-e987b38bf0bc","EventTimestamp":"2022-02-12T19:13:07.8024849+00:00","CountryCode":"US","VaccinationType":"Pfizer","ShotNumber":2}
+Delivered message to us [[0]] @2694
+{"RecipientID":"4a8a333d-658d-4b36-84d7-ce9e85d31541","EventTimestamp":"2022-02-12T19:13:07.8024849+00:00","CountryCode":"US","VaccinationType":"Johnson & Johnson","ShotNumber":2}
+Delivered message to us [[0]] @2695
+{"RecipientID":"15b90150-88b0-4820-93c7-84cf2d313aba","EventTimestamp":"2022-02-12T19:13:07.8024849+00:00","CountryCode":"US","VaccinationType":"Pfizer","ShotNumber":2}
+Delivered message to us [[0]] @2696
+{"RecipientID":"6c2eeb40-9934-447e-89ba-8a75f4a4f427","EventTimestamp":"2022-02-12T19:13:07.8024849+00:00","CountryCode":"US","VaccinationType":"Moderna","ShotNumber":2}
+```
+
+Note that these log entries exist *only* because I am writing the events to the console in my application. This is probably a bad idea for performance, but it's good for a demo.
+
+### Congratulations
+You have an application running in OpenShift, that is connected to your Managed Kafka instance and is creating events.
 
 ## 4. Creating an app to consume events and write to an event store  
 ## 5. Creating an app that summarizes a day's events and stores the results in a database
