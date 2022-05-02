@@ -278,13 +278,13 @@ Click the Create button to start the build. In a few minutes we'll have our appl
 ### 3.7 Binding Kafka and our App
 At this point we have a Kafka instance, and we have an application. However, we have not yet bound the instance to the app as explained in section 3.4.  
 
-We can see this fact — the fact that it's not bound to Kafka — by viewing the logs at the command line. Use the following command:
+We can see this fact — the fact that it's not bound to Kafka — by viewing the logs at the command line. Use the following command (press Ctrl-C to end the streaming log messages):
 
-`oc logs -l app=vac-seen-generator-git`  
+`oc logs -l app=vac-seen-generator -f`  
 
 Here's an example:
 ```console
-❯ oc logs -l app=vac-seen-generator-git
+❯ oc logs -l app=vac-seen-generator-git -f
 Waiting for service binding...
 Waiting for service binding...
 Waiting for service binding...
