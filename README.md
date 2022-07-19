@@ -1,6 +1,6 @@
 # csharp-kafka-events-workshop
 
-This workshop/tutorial will guide you through the creation of an application that demonstrates Apache Kafka and Event Handling using the C# programming language.  
+This workshop/activity/tutorial will guide you through the creation of an application that demonstrates Apache Kafka and Event Handling using the C# programming language.   
 
 At the end of this tutorial you will have:  
 1. An instance of OpenShift running in Developer Sandbox for Red Hat Openshift. This will be referred to as your "cluster".  
@@ -13,7 +13,7 @@ At the end of this tutorial you will have:
 1. An application that is a web page to control and view your system.
 
 ## Note from the author  
-Yes, this tutorial is lengthy and involves many moving parts. This is a result of my attempt to mimic a real world situation. This is not just a simple "Hello world" example; this tutorial will yield useable information for your own use of Kafka and/or an Event Store.
+Yes, this tutorial is lengthy and involves many moving parts: Four microservices, two databases, a Kafka instance, and a web interface. This is a result of my attempt to mimic a real world situation. This is not just a simple "Hello world" example; this tutorial will yield useable information for your own use of Kafka and/or an Event Store.
 
 ## Prerequisites  
 The following prerequisites are necessary:  
@@ -25,9 +25,11 @@ The following prerequisites are necessary:
 ## High-level overview 
 Here's what you'll be doing:
 1. Provisioning your OpenShift sandbox (i.e. your cluster)  
+1. Creating a PostgreSQL database  
+1. Creating a MariaDB database  
+1. Creating an app to consume events and write to an event store  
 1. Preparing your managed Kafka instance  
 1. Creating an app to produce events  
-1. Creating an app to consume events and write to an event store  
 1. Creating an app that summarizes a day's events and stores the results in a database
 1. Creating a web app to view and control this system  
 
@@ -44,9 +46,11 @@ The `oc` command line interface (CLI) allows you to work with your OpenShift clu
 ### 1.3 Log in to your sandbox from the command line
 Open a terminal session on your local machine and use the `oc login` command to log into your cluster from there. The instructions for doing that are in [this short article](https://developers.redhat.com/blog/2021/04/21/access-your-developer-sandbox-for-red-hat-openshift-from-the-command-line).  This can be done using macOS, Windows, and Linux.
 
-
-## 2. Preparing your managed Kafka instance  
-### 2.1 Get your managed Kafka instance  
+## 2. Creating a PostgreSQL database
+## 3. Creating a MariaDB database
+## 5. Creating an app to consume events and write to an event store
+## 4. Preparing your managed Kafka instance  
+### 4.1 Get your managed Kafka instance  
 Go to https://developers.redhat.com/products/red-hat-openshift-streams-for-apache-kafka/getting-started  
 
 Click on "Try our Kafka service at no cost" (red) button. You may be prompted to log in to your Red Hat Developer account:  
@@ -72,10 +76,10 @@ After a few minutes the status will change to "Ready". If you don't see this, tr
 
 ![Kafka instance is ready](./images/kafka_instance_is_ready.png)
 
-### 2.2 Install the 'rhoas' CLI
+### 4.2 Install the 'rhoas' CLI
 The `rhoas` (Red Hat OpenShift Application Services) CLI can be installed by following the instructions on [the `rhoas` CLI installation page](https://access.redhat.com/documentation/en-us/red_hat_openshift_streams_for_apache_kafka/1/guide/f520e427-cad2-40ce-823d-96234ccbc047). This CLI is needed to use the Service Binding that connects your Kafka instance to your application.
 
-### 2.3 Log in  
+### 4.3 Log in  
 Run this command to log into your Red Hat OpenShift Application Services account. 
 
 `rhoas login`
@@ -102,7 +106,7 @@ Here's an example:
 ```
 
 
-### 2.4 Determine which kafka instance to use  
+### 4.4 Determine which kafka instance to use  
 It's possible to have more than one Kafka instance available to you (in order words, `rhoas kafka list` shows multiple instances), so it's necessary to specify which one you want to use. This is done by using the command `rhoas kafka use`. Here's an example:  
 
 `rhoas kafka use --name vaccinations`  
@@ -112,7 +116,7 @@ It's possible to have more than one Kafka instance available to you (in order wo
  Kafka instance "vaccinations" has been set as the current instance.
 ```
 
-### 2.5 Create a Kafka topic
+### 4.5 Create a Kafka topic
 Events are written to and retrieved from Kafka by subscribing to a specific "topic" within a specific Kafka instance. At this point it is necessary to create a topic within the "vaccinations" instance. Our event producer has the topic "us" hard-coded into it, so we need to create that topic. Use the following command to create the topic:  
 
 `rhoas kafka topic create --name us`
@@ -134,7 +138,7 @@ The command will return a lot of JSON with information about the topic. You can 
   us              1   604800000             -1 (Unlimited)
 ```
 
-### 2.6 Get the token needed to connect to your cluster
+### 4.6 Get the token needed to connect to your cluster
 You will need an authentication token in order for your Kafka isntance to connect to your OpenShift cluster. Get that token by visiting the following web page:
 
 https://console.redhat.com/openshift/token
@@ -210,23 +214,23 @@ At this point we're ready to "bind" our Kafka instance to our application. More 
 
 But wait; we don't *have* an application. For this tutorial, we haven't created that DeploymentConfig yet. That's the next step.
 
-## 3. Creating an app to produce events  
+## 5. Creating an app to produce events  
 The first step in this entire suite of applications is to have a service in OpenShift that produces events and deposits them into the proper topic in our Kafka instance. This is the source of our events. An Event Source is where events are generated. An Event Sink is where events are consumed.
 
-### 3.1 View the source code — this is optional
+### 5.1 View the source code — this is optional
 If you wish to see the code that will be implemented, check out [this Github repository](https://github.com/DonSchenck/vac-seen-generator).
 
-### 3.2 Hard-coded values
+### 5.2 Hard-coded values
 Several values are hard-coded inside the application. *Part* of the reason for this is to mimic the real-world implementation of a microservice.
 
 If this were the actual vaccination tracking system, you would expect every country to create their own reporting system. In that context, hard-coding the country code, vaccination types, and other specific information makes sense.
 
-### 3.3 What we're doing
+### 5.3 What we're doing
 This application will create from one to 40 vaccination events per day for the past 30 days.  
 
 The type of shot (e.g. Pfizer or Moderna), the shot number (1st vaccination, 2nd, booster) and number of events for that day are all randomly generated.
 
-### 3.4 How the Service Binding works
+### 5.4 How the Service Binding works
 When this application starts, it has no knowledge of the Kafka instance to which it will produce events. In order to write to Kafka, this application needs to know the following:  
 * URI of the bootstrap server
 * Topic — hard-coded as "us"
@@ -246,14 +250,14 @@ You are presented with that list, and you select a Deployment. The tool will the
 When this happens, the existing pod in the container is destroyed and replaced with a new pod. This new pod has visibility to the new "bindings" directory (and sub-directories). The application can then read from these files, get the information needed, and begin sending events to Kafka.
 
 
-### 3.5 The app
+### 5.5 The app
 The source code for the application can be found at this Github repo:
 
 [https://github.com/DonSchenck/vac-seen-generator.git](https://github.com/DonSchenck/vac-seen-generator.git)
 
 You **do not** need to clone or download this repo. Instead, we'll use the OpenShift option to build our application from a Github repo.
 
-### 3.6 Creating the app
+### 5.6 Creating the app
 In the OpenShift dashboard, make sure you are in the Developer perspective.  
 
 ![Developer Perspective](./images/developer_perspective.png)
@@ -275,7 +279,7 @@ Click the Create button to start the build. In a few minutes we'll have our appl
 ![vac-seen-generator with no service binding](./images/vac_seen_generator_up_and_running_without_service_binding.png)  
 
 
-### 3.7 Binding Kafka and our App
+### 5.7 Binding Kafka and our App
 At this point we have a Kafka instance, and we have an application. However, we have not yet bound the instance to the app as explained in section 3.4.  
 
 We can see this fact — the fact that it's not bound to Kafka — by viewing the logs at the command line. Use the following command (press Ctrl-C to end the streaming log messages):
@@ -339,7 +343,5 @@ Note that these log entries exist *only* because I am writing the events to the 
 ### Congratulations
 You have an application running in OpenShift, that is connected to your Managed Kafka instance and is creating events.
 
-## 4. Creating an app to consume events and write to an event store  
-## 5. Creating an app that summarizes a day's events and stores the results in a database
-## 6. Creating a web app to view and control this system  
+
 
