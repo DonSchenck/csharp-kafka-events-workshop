@@ -77,7 +77,7 @@ After a few minutes the status will change to "Ready". If you don't see this, tr
 ![Kafka instance is ready](./images/kafka_instance_is_ready.png)
 
 ### 4.2 Install the 'rhoas' CLI
-The `rhoas` (Red Hat OpenShift Application Services) CLI can be installed by following the instructions on [the `rhoas` CLI installation page](https://access.redhat.com/documentation/en-us/red_hat_openshift_streams_for_apache_kafka/1/guide/f520e427-cad2-40ce-823d-96234ccbc047). This CLI is needed to use the Service Binding that connects your Kafka instance to your application.
+The `rhoas` (Red Hat OpenShift Application Services) CLI can be installed by following the instructions on [the `rhoas` CLI installation page](https://access.redhat.com/documentation/en-us/red_hat_openshift_application_services/1/guide/b9d4f17b-923f-49a6-b513-954399fc2ddd). This CLI is needed to use the Service Binding that connects your Kafka instance to your application.
 
 ### 4.3 Log in  
 Run this command to log into your Red Hat OpenShift Application Services account. 
