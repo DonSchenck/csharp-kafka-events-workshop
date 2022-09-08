@@ -1,5 +1,39 @@
 # csharp-kafka-events-workshop
 
+## What is this?
+This activity encompasses what is called the "Vac-Seen System", a small system that allows the recording and tracking of COVID-19 vaccinations.
+
+This is entirely fictional but does demonstrate the following technologies and concepts:
+* Microservices
+* Apache Kafka
+* Command Query Responsibility Segregation, or CQRS
+* Blazor, running in Kubernetes
+
+This system is associated with, and specifically created for, the [Red Hat OpenShift Sandbox](https://developers.redhat.com/developer-sandbox).
+
+At the end of this tutorial you will have an instance of a small system that has the following partss:
+
+* A "vac-seen-generator" REST API microservice that accepts a date and produces Kafka events that are stored in the Kafka instance "vaccinations".  
+* A "vac-seen-todb" Kubernetes job that watches the Kafka instance and picks up any new events. Those events are then written to persistence in a [Martin Event Store](https://martendb.io/).  
+* A "vac-seen-rollup" REST API microservice that accepts a date and creates a summary for that date. It does this by reading all of the vaccination events in the Marten Event Store for the given date and calculating a total number of vaccinations for that date. That date and count are then written to a MariaDB database table "vaccination_summaries".  
+* A "vac-seen-getter" REST API microservice that accepts a date and a number of days (e.g. "9/2/2022" and 30) and, beginning at that date, reads every summary row from the "vaccinations_summaries" table, backwards, the number of days. The retrieved database rows are used to create a JSON array, which is returned to the caller.
+* A web front end that drives the processes. From the front end the user can generate random events, perform a rollup operation for a date, and retrieve the records to be displayed in a bar chart.
+
+You can see this in action by viewing this short video (less than 90 seconds in length).
+
+
+## Need help?
+If you need help or get stuck, email devsandbox@redhat.com.
+If you find a defect, [create an Issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/creating-an-issue) in this repository.
+
+## Prerequisites
+The following **three** prerequisites are necessary:
+1. An account in [OpenShift Sandbox](https://developers.redhat.com/developer-sandbox) (No problem; it's free). This is not actually *necessary*, since you can use this tutorial with any OpenShift cluster.
+1. The `oc` command-line tool for OpenShift. There are instructions later in this article for the installation of `oc`.
+1. Your machine will need access to a command line; Bash or PowerShell, either is fine.
+
+## All Operating Systems Welcome
+You can use this activity regardless of whether your PC runs Windows, Linux, or macOS.
 This workshop/activity/tutorial will guide you through the creation of an application that demonstrates Apache Kafka and Event Handling using the C# programming language.   
 
 By following the instructions of this tutorial, you will:
